@@ -2,117 +2,19 @@ from flask import Blueprint, redirect, render_template, request, url_for, flash
 from flask_login import current_user, login_required
 from ..apiauthhelper import token_required
 from flask_cors import CORS, cross_origin
-from app.ig.forms import PostForm
 from app.models import Post, db, User
 
 
 ig = Blueprint('ig', __name__, template_folder='igtemplates')
 
 
-@ig.route('/posts/create', methods=["GET","POST"])
-@login_required
-def createPost():
-    form = PostForm()
-    if request.method == "POST":
-        if form.validate():
-            title = form.title.data
-            img_url = form.img_url.data
-            caption = form.caption.data
 
-            post = Post(title, img_url, caption, current_user.id)
-            post.save()
-            flash('Successfully created post.', 'success')
-        else:
-            flash('Invalid form. Please fill out the form correctly.', 'danger')
-    return render_template('createpost.html', form=form)
-
-@ig.route('/posts')
-def getAllPosts():
-    if current_user.is_authenticated:
-        posts = current_user.get_followed_posts()
-    else:
-        posts = Post.query.order_by(Post.date_created.desc()).all()
-    return render_template('feed.html', posts=posts)
-
-
-@ig.route('/posts/<int:post_id>')
-def getSinglePost(post_id):
-    post = Post.query.get(post_id)
-    # post = Post.query.filter_by(id=post_id).first()
-    return render_template('singlepost.html', post=post)
-
-@ig.route('/posts/update/<int:post_id>', methods=["GET", "POST"])
-@login_required
-def updatePost(post_id):
-    form = PostForm()
-    # post = Post.query.get(post_id)
-    post = Post.query.filter_by(id=post_id).first()
-    if current_user.id != post.user_id:
-        flash('You are not allowed to update another user\'s posts.', 'danger')
-        return redirect(url_for('ig.getSinglePost', post_id=post_id))
-    if request.method=="POST":
-        if form.validate():
-            title = form.title.data
-            img_url = form.img_url.data
-            caption = form.caption.data
-
-            post.updatePostInfo(title,img_url,caption)
-            post.saveUpdates()
-            flash('Successfully updated post.', 'success')
-            return redirect(url_for('ig.getSinglePost', post_id=post_id))
-        else:
-            flash('Invalid form. Please fill out the form correctly.', 'danger')
-    return render_template('updatepost.html', form=form,  post=post)
-
-
-@ig.route('/posts/delete/<int:post_id>')
-@login_required
-def deletePost(post_id):
-    post = Post.query.get(post_id)
-    if current_user.id != post.user_id:
-        flash('You are not allowed to delete another user\'s posts.', 'danger')
-        return redirect(url_for('ig.getSinglePost', post_id=post_id))
-    post.delete()
-    flash('Successfully delete post.', 'success')
-    return redirect(url_for('ig.getAllPosts'))
-
-
-@ig.route('/follow/<int:user_id>')
-@login_required
-def followUser(user_id):
-    user = User.query.get(user_id)
-    current_user.follow(user)
-    return redirect(url_for('index'))
-
-@ig.route('/unfollow/<int:user_id>')
-@login_required
-def unfollowUser(user_id):
-    user = User.query.get(user_id)
-    current_user.unfollow(user)
-    return redirect(url_for('index'))
-
-
-
-
-
-################# API ROUTES #####################
 @ig.route('/api/posts')
 def getAllPostsAPI():
-    # args = request.args
-    # pin = args.get('pin')
-    # print(pin, type(pin))
-    # if pin == '1234':
-
         posts = Post.query.order_by(Post.date_created.desc()).all()
-
         my_posts = [p.to_dict() for p in posts]
         return {'status': 'ok', 'total_results': len(posts), "posts": my_posts}
-    # else:
-    #     return {
-    #         'status': 'not ok',
-    #         'code': 'Invalid Pin',
-    #         'message': 'The pin number was incorrect, please try again.'
-    #     }
+  
 
 @ig.route('/api/posts/<int:post_id>')
 def getSinglePostsAPI(post_id):
@@ -133,7 +35,7 @@ def getSinglePostsAPI(post_id):
 @ig.route('/api/posts/create', methods=["POST"])
 @token_required
 def createPostAPI(user):
-    data = request.json # this is coming from POST request Body
+    data = request.json 
 
     title = data['title']
     caption = data['caption']
@@ -163,7 +65,7 @@ def delPostAPI(user, post_id):
 @ig.route('/api/posts/update', methods=["POST"])
 @token_required
 def updatePostAPI(user):
-    data = request.json # this is coming from POST request Body
+    data = request.json 
 
     post_id = data['postId']
 
@@ -190,7 +92,7 @@ def updatePostAPI(user):
 @cross_origin()
 @token_required
 def ApifollowUser(user):
-    data = request.json # this is coming from POST request Body
+    data = request.json 
     users_id=data['users_id']
     user2 = User.query.filter_by(id=users_id).first()
     user1 = User.query.filter_by(id=user.id).first()
@@ -210,7 +112,7 @@ def ApifollowUser(user):
 @cross_origin()
 @token_required
 def ApiunfollowUser(user):
-    data = request.json # this is coming from POST request Body
+    data = request.json 
     username=data['unfollow']
     user2 = User.query.filter_by(username=username).first()
     user1 = User.query.filter_by(id=user.id).first()
@@ -218,7 +120,7 @@ def ApiunfollowUser(user):
    
     return {
         'status': 'ok',
-        'message': "Userr unfollowed"
+        'message': "User unfollowed"
     }
 
 @ig.route('/api/followers/<int:user_id>')
@@ -270,12 +172,8 @@ def getMyFeedPostsAPI(user_id):
             my_feed.append(each)
     print(my_feed)
     return {'status': 'ok', 'total_results': len(posts), "posts": my_feed}
-    # else:
-    #     return {
-    #         'status': 'not ok',
-    #         'code': 'Invalid Pin',
-    #         'message': 'The pin number was incorrect, please try again.'
-    #     }
+   
+ 
 
 
 
@@ -283,16 +181,18 @@ def getMyFeedPostsAPI(user_id):
 def getMyPostsAPI(users_id):
     users_id = User.query.filter_by(id=users_id).first()
     users_id=users_id.id
-    # posts = Post.query.filter_by(user_id=users_id.id).order_by(Post.date_created.desc()).all()
     posts = Post.query.filter_by(user_id=users_id).all()
     my_posts = [p.to_dict() for p in posts]
     print(my_posts)
     
     
     return {'status': 'ok', 'total_results': len(posts), "posts": my_posts}
-    # else:
-    #     return {
-    #         'status': 'not ok',
-    #         'code': 'Invalid Pin',
-    #         'message': 'The pin number was incorrect, please try again.'
-    #     }
+   
+@ig.route('/api/userid/<string:user_name>')
+def getUserId(user_name):
+    print(user_name)
+    users_id = User.query.filter_by(username=user_name).first()
+    this_id=users_id.id
+    print(this_id)
+    return {'status': 'ok', 'username':user_name, "id": this_id}
+    
